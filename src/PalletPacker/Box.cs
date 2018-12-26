@@ -14,7 +14,8 @@ namespace PalletPacker
         /// </summary>
         public Point3D Dimensions;
         /// <summary>
-        /// Box packing data. Null if box is not packed.
+        /// Box packing data. Location in the pallet and rotated box dimensions.
+        /// Null if box is not packed.
         /// </summary>
         public PackingData PackingData;
 

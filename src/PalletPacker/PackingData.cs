@@ -5,13 +5,13 @@ using System.Text;
 namespace PalletPacker
 {
     /// <summary>
-    /// Box packing data.
+    /// Box packing data. 
     /// </summary>
     public class PackingData
     {
         /// <summary>
         /// Packed box dimensions. If orientation of the box did not change during packing
-        /// this value is the same as Dimensions field.
+        /// this value is the same as box Dimensions field.
         /// </summary>
         public Point3D PackedDimensions;
         /// <summary>

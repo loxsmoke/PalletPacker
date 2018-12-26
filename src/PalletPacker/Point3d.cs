@@ -118,7 +118,7 @@ namespace PalletPacker
         /// <summary>
         /// All 6 possible combinations of X,Y and Z coordinates
         /// </summary>
-        public IEnumerable<Point3D> AllVariants
+        public IEnumerable<Point3D> AllRotations
         {
             get
             {
@@ -182,7 +182,12 @@ namespace PalletPacker
         {
             return new Point3D() { X = this.X, Y = otherY, Z = otherZ };
         }
-
+        public Point3D SubtractY(long deltaY)
+        {
+            var clone = ((Point3D)MemberwiseClone());
+            clone.Y -= deltaY;
+            return clone;
+        }
         public override string ToString()
         {
             return $"[{X},{Y},{Z}]";
