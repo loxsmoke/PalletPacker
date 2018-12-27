@@ -19,7 +19,8 @@ namespace PalletPacker
         public class PackedPallet
         {
             /// <summary>
-            /// Dimensions of the pallet.
+            /// Dimensions of the pallet. This is rotated dimensions of the pallet and it
+            /// could be different from specified dimensions.
             /// </summary>
             public Point3D PalletDimensions;
             /// <summary>
@@ -103,7 +104,7 @@ namespace PalletPacker
             /// <summary>
             /// Layer thickness. Y dimension of the layer.
             /// </summary>
-            public long LayerY;
+            public long LayerThickness;
             /// <summary>
             /// The total sum of differences of all boxes between this layer thickness and
             /// dimension of the box that is closest to the layer thickness.
@@ -112,7 +113,7 @@ namespace PalletPacker
             /// </inheritdoc>
             public override string ToString()
             {
-                return $"dim={LayerY} val={MinDifferenceTotal}";
+                return $"dim={LayerThickness} val={MinDifferenceTotal}";
             }
         }
 
@@ -120,23 +121,32 @@ namespace PalletPacker
         /// The list of all possible packing layers created from each possible box dimension
         /// </summary>
         private List<Layer> layers;
+        /// <summary>
+        /// Overridable property that can terminate packing early. For example after some timeout
+        /// value or number of packing iterations.
+        /// </summary>
+        public virtual bool Quit { get => false; }
 
-        private bool quit;
-        public int iterations;
+        public int IterationCount;
+
         private long subLayerThickness, sublayerZlimit;
 
         /// <summary>
-        /// 
+        /// Pack the list of boxes into a pallet. In other word put small boxes into a big one.
+        /// Function packs pallet in layers and tries all pallet rotations and all possible 
+        /// starting layer sizes.
+        /// Returned pallet could be null if the list of boxes was empty or packed pallet that may
+        /// contains all or only some boxes.
         /// </summary>
         /// <param name="boxList"></param>
         /// <param name="palletSize">Pallet dimensions.</param>
-        /// <returns></returns>
+        /// <returns>Null if box list is empty or packed pallet</returns>
         public PackedPallet Pack(List<Box> boxList, Point3D palletSize)
         {
             if (boxList == null || boxList.Count == 0) return null;
-            quit = false;
-            iterations = 0;
+            IterationCount = 0;
             PackedPallet bestPackedPallet = null;
+            
             // Try packing pallet in all orientations
             foreach (var rotatedPallet in palletSize.AllRotations)
             {
@@ -144,22 +154,20 @@ namespace PalletPacker
                 // Try packing pallet starting with different layer
                 foreach (var layer in layers)
                 {
-                    if (quit) break;
-                    ++iterations;
+                    if (Quit) break;
+                    ++IterationCount;
                     var packedPallet = PackPallet(layer, boxList, rotatedPallet);
-                    if (quit) break;
+                    if (Quit) break;
                     if (bestPackedPallet == null ||
                         packedPallet.PackedVolume > bestPackedPallet.PackedVolume)
                     {
                         bestPackedPallet = packedPallet;
                     }
-                    if (bestPackedPallet.AllBoxesPacked) break;
+                    if (bestPackedPallet.AllBoxesPacked) return bestPackedPallet;
                 }
 
-                if (bestPackedPallet.AllBoxesPacked) break;
-
                 // If pallet is a cube then rotating it makes no sense. 
-                // Just exit after first packing attempt 
+                // Just exit after the first packing attempt 
                 if (palletSize.IsCube) break;
             }
             return bestPackedPallet;
@@ -194,7 +202,7 @@ namespace PalletPacker
 
                     layers.Add(new Layer()
                     {
-                        LayerY = checkDim.Y,
+                        LayerThickness = checkDim.Y,
                         MinDifferenceTotal = CalculateMinDiffTotal(boxList, box, checkDim.Y)
                     });
                     layerThickness.Add(checkDim.Y);
@@ -205,6 +213,9 @@ namespace PalletPacker
 
         /// <summary>
         /// Pack boxes into a pallet starting with specified layer thickness.
+        /// The minor "optimization" here is sub-layer packing that is performed
+        /// if not enough boxes are available in the layer and layer has to grow to
+        /// accomodate bigger available boxes
         /// </summary>
         /// <param name="startLayer">The layer to start with</param>
         /// <param name="boxList">All boxes to pack</param>
@@ -221,17 +232,22 @@ namespace PalletPacker
 
             // Start building layers at Y=0
             var layerBottomY = 0L;
-            var layerThickness = startLayer.LayerY;
+            var layerThickness = startLayer.LayerThickness;
             do
             {
                 subLayerThickness = 0;
                 var oldLayerThickness = layerThickness;
                 layerThickness = PackLayer(pallet, layerBottomY, layerThickness, palletDimensions.Y - layerBottomY, palletDimensions.Z);
                 if (pallet.AllBoxesPacked) break;
-                if (subLayerThickness != 0 && !quit)
+                if (subLayerThickness != 0 && !Quit)
                 {
                     // Pack the special case where layer starts at oldLayerThickness but later
-                    // becomes thicker to accomodate taller boxes
+                    // becomes thicker to accomodate taller boxes like this:
+                    //             [XX]
+                    // [X] [X] [X] [XX]
+                    // This call would pack the part of the layer marked by *
+                    // ************[XX]
+                    // [X] [X] [X] [XX]
                     PackLayer(pallet, layerBottomY + oldLayerThickness,
                         subLayerThickness,
                         layerThickness - oldLayerThickness,
@@ -243,7 +259,7 @@ namespace PalletPacker
                 // Find the next layer to pack
                 layerThickness = FindLayer(pallet.NotPackedBoxes, palletDimensions.SubtractY(layerBottomY));
                 if (layerThickness == 0) break;
-            } while (!quit);
+            } while (!Quit);
             return pallet;
         }
 
@@ -318,7 +334,7 @@ namespace PalletPacker
             // Create 2d packing line of the layer. 
             // It grows in a horizontal plane with X being width and Z height of this line. 
             var packLine = new PackLine(pallet.PalletDimensions.X);
-            while (!quit)
+            while (!Quit)
             {
                 var valley = packLine.FindValley();
 
