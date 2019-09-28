@@ -6,4 +6,4 @@ Based on [three-dimensional pallet packing algorithm](http://www.dtic.mil/dtic/t
 
 Packs a set of boxes into a "big box" pallet using 2d packing layer by layer.
 
-[Auto-generated documentation]((https://github.com/loxsmoke/PalletPacker/blob/master/PalletPacker.md) 
+[Auto-generated documentation](https://github.com/loxsmoke/PalletPacker/blob/master/PalletPacker.md) 
