@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using MoreLinq.Extensions;
@@ -9,7 +10,7 @@ namespace PalletPacker
     /// <summary>
     /// Based on algorithm from
     /// http://www.dtic.mil/dtic/tr/fulltext/u2/a391201.pdf
-    /// Packs a set of boxes into a "bix box" pallet using 2d packing layer by layer.
+    /// Packs a set of boxes into a "big box" pallet using 2d packing layer by layer.
     /// </summary>
     public class Packer
     {
@@ -110,7 +111,11 @@ namespace PalletPacker
             /// dimension of the box that is closest to the layer thickness.
             /// </summary>
             public long MinDifferenceTotal;
-            /// </inheritdoc>
+            
+            /// <summary>
+            /// String representation of the object.
+            /// </summary>
+            /// <returns></returns>
             public override string ToString()
             {
                 return $"dim={LayerThickness} val={MinDifferenceTotal}";
@@ -121,32 +126,49 @@ namespace PalletPacker
         /// The list of all possible packing layers created from each possible box dimension
         /// </summary>
         private List<Layer> layers;
-        /// <summary>
-        /// Overridable property that can terminate packing early. For example after some timeout
-        /// value or number of packing iterations.
-        /// </summary>
-        public virtual bool Quit { get => false; }
 
+        /// <summary>
+        /// Packing timeout milliseconds. Null for no timeout.
+        /// </summary>
+        public int? TimeoutMilliseconds;
+        Stopwatch stopwatch;
+
+        /// <summary>
+        /// Packing iteration limit. Null for no iteration limit.
+        /// </summary>
+        public int? PackingIterationLimit;
+
+        /// <summary>
+        /// The number of pallete packing attempts. Value is initialized to 0 and then increased by one before 
+        /// each packing attempt.
+        /// </summary>
         public int IterationCount;
 
         private long subLayerThickness, sublayerZlimit;
 
         /// <summary>
-        /// Pack the list of boxes into a pallet. In other word put small boxes into a big one.
+        /// Pack the list of boxes into a pallet. In other words put small boxes into a big one.
         /// Function packs pallet in layers and tries all pallet rotations and all possible 
         /// starting layer sizes.
         /// Returned pallet could be null if the list of boxes was empty or packed pallet that may
         /// contains all or only some boxes.
+        /// Packing is done in the loop each time incrementing IterationCount field.
+        /// Packing stops when either all boxes fit in the pallet, packing times out or the number of packing iterations
+        /// is above the specified limit.
         /// </summary>
-        /// <param name="boxList"></param>
+        /// <param name="boxList">The list of boxes to pack.</param>
         /// <param name="palletSize">Pallet dimensions.</param>
         /// <returns>Null if box list is empty or packed pallet</returns>
         public PackedPallet Pack(List<Box> boxList, Point3D palletSize)
         {
             if (boxList == null || boxList.Count == 0) return null;
             IterationCount = 0;
+            // Start a timer if needed for timeout
+            if (TimeoutMilliseconds.HasValue) stopwatch = Stopwatch.StartNew();
+            else stopwatch = null;
+
             PackedPallet bestPackedPallet = null;
-            
+
             // Try packing pallet in all orientations
             foreach (var rotatedPallet in palletSize.AllRotations)
             {
@@ -154,10 +176,10 @@ namespace PalletPacker
                 // Try packing pallet starting with different layer
                 foreach (var layer in layers)
                 {
-                    if (Quit) break;
+                    if (ShouldCancelPacking()) break;
                     ++IterationCount;
                     var packedPallet = PackPallet(layer, boxList, rotatedPallet);
-                    if (Quit) break;
+                    if (ShouldCancelPacking()) break;
                     if (bestPackedPallet == null ||
                         packedPallet.PackedVolume > bestPackedPallet.PackedVolume)
                     {
@@ -239,7 +261,7 @@ namespace PalletPacker
                 var oldLayerThickness = layerThickness;
                 layerThickness = PackLayer(pallet, layerBottomY, layerThickness, palletDimensions.Y - layerBottomY, palletDimensions.Z);
                 if (pallet.AllBoxesPacked) break;
-                if (subLayerThickness != 0 && !Quit)
+                if (subLayerThickness != 0 && !ShouldCancelPacking())
                 {
                     // Pack the special case where layer starts at oldLayerThickness but later
                     // becomes thicker to accomodate taller boxes like this:
@@ -259,7 +281,7 @@ namespace PalletPacker
                 // Find the next layer to pack
                 layerThickness = FindLayer(pallet.NotPackedBoxes, palletDimensions.SubtractY(layerBottomY));
                 if (layerThickness == 0) break;
-            } while (!Quit);
+            } while (!ShouldCancelPacking());
             return pallet;
         }
 
@@ -334,7 +356,7 @@ namespace PalletPacker
             // Create 2d packing line of the layer. 
             // It grows in a horizontal plane with X being width and Z height of this line. 
             var packLine = new PackLine(pallet.PalletDimensions.X);
-            while (!Quit)
+            while (!ShouldCancelPacking())
             {
                 var valley = packLine.FindValley();
 
@@ -405,7 +427,7 @@ namespace PalletPacker
             {
                 // Check all orientations of the box that fit in maximum space
                 foreach (var boxDimensions in 
-                    box.Dimensions.AllRotations.Where(maximumBox.Contains)) // Order different from original. was XZY, YXZ, YZX, ZXY, ZYX
+                    box.Dimensions.AllRotations.Where(maximumBox.ContainsDimension)) // Order different from original. was XZY, YXZ, YZX, ZXY, ZYX
                 {
                     var fitsInLayer = boxDimensions.Y <= idealBox.Y;
                     var delta = idealBox.AbsoluteDiff(boxDimensions);   // Calculate absolute coordinate differences
@@ -421,6 +443,20 @@ namespace PalletPacker
                 }
             }
             return foundBox;
+        }
+
+        /// <summary>
+        /// Check if timeout was reached or if number of iterations is above the limit.
+        /// </summary>
+        /// <returns></returns>
+        protected bool ShouldCancelPacking()
+        {
+            if (TimeoutMilliseconds.HasValue && (TimeoutMilliseconds.Value == 0 ||
+                stopwatch != null &&
+                TimeoutMilliseconds.Value < stopwatch.ElapsedMilliseconds)) return true;
+
+            if (PackingIterationLimit.HasValue && PackingIterationLimit.Value < IterationCount) return true;
+            return false;
         }
     }
 }

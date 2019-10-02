@@ -108,6 +108,10 @@ namespace PalletPacker
                 if (Left != null && Left.Z == Z) RemoveSelf();
             }
 
+            /// <summary>
+            /// Add the box to the left side.
+            /// </summary>
+            /// <param name="boxSize"></param>
             public void AddLeftZ(Point3D boxSize)
             {
                 // assuming that box size is narrower than gap
@@ -165,7 +169,7 @@ namespace PalletPacker
             return valley;
         }
         /// <summary>
-        /// Add X,Z box to the segment of he pack line.
+        /// Add X,Z box to the segment of the pack line.
         /// This method assumes dimensions that are no wider than the segment.
         /// If segment is wider than dimensions being added then box is added
         /// to the left side of the segment.
