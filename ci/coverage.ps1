@@ -14,7 +14,7 @@ $openCoverConsole = "packages\OpenCover.4.6.519\tools\OpenCover.Console.exe"
 
 # OpenCover currently not supporting portable pdbs (https://github.com/OpenCover/opencover/issues/601)
 
-$configuration = "Coverage"
+$configuration = "Debug"
 Get-ChildItem -Filter .\test\PalletPackerTests |
     ForEach-Object {
       $csprojPath = $_.FullName
