@@ -87,8 +87,18 @@ namespace PalletPackerTests
             Assert.Equal(deltaZ, calculated.Z);
         }
 
-        public void MinDiff()
+        [Theory]
+        [InlineData(10, 10, 10, 0, 10)]
+        [InlineData(10, 20, 30, 31, 1)]
+        [InlineData(10, 20, 30, 21, 1)]
+        [InlineData(10, 20, 30, 11, 1)]
+        [InlineData(10, 20, 30, 29, 1)]
+        [InlineData(10, 20, 30, 19, 1)]
+        [InlineData(10, 20, 30, 9, 1)]
+        public void MinDiff(int x, int y, int z, int dimension, int expectedDiff)
         {
+            var calculated = new Point3D(x, y, z).MinDiff(dimension);
+            Assert.Equal(expectedDiff, calculated);
         }
     }
 }
