@@ -29,7 +29,7 @@ Get-ChildItem -Filter .\test\PalletPackerTests |
           -output:$coverageFile `
           -oldStyle `
           -filter:"+[$projectName]* -[$testProjectName]*" `
-          -searchdirs:"$csprojPath\bin\$configuration\netcoreapp2.1\" `
+          -searchdirs:"$csprojPath\bin\$configuration\netcoreapp2.1" `
           -register:user
     }
 
