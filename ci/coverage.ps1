@@ -19,8 +19,8 @@ Get-ChildItem -Filter .\test\PalletPackerTests |
     ForEach-Object {
       $csprojPath = $_.FullName
       $testProjectName = $_.Name
-# Project name being tested is unit test project name with UnitTests removed. "UnitTests" length == 9 
-      $projectName = $testProjectName -replace ".{9}$"
+# Remove the last 5 chars from the project name: BlahBlahTests => BlahBlah 
+      $projectName = $testProjectName -replace ".{5}$"
         cmd.exe /c $openCoverConsole `
           -target:"c:\Program Files\dotnet\dotnet.exe" `
           -targetargs:"test -c $configuration $csprojPath\$testProjectName.csproj" `
