@@ -35,8 +35,8 @@ Get-ChildItem -Filter .\test\PalletPackerTests |
 
 If ($generateReport) 
 {
-  nuget install -Verbosity quiet -OutputDirectory packages -Version 2.4.5.0 ReportGenerator
-  $reportGenerator = "packages\ReportGenerator.2.4.5.0\tools\ReportGenerator.exe"
+  nuget install -OutputDirectory packages -Version 4.4.5 ReportGenerator
+  $reportGenerator = "packages\ReportGenerator.4.4.5\tools\ReportGenerator.exe"
   cmd.exe /c $reportGenerator `
     -reports:$coverageFile `
     -targetdir:$coverageOutputDirectory `
@@ -45,7 +45,7 @@ If ($generateReport)
 
 If ($uploadCodeCov) 
 {
-  nuget install -Verbosity quiet -OutputDirectory packages -Version 1.0.1 Codecov
+  nuget install -OutputDirectory packages -Version 1.9.0 Codecov
   $Codecov = "packages\Codecov.1.0.1\tools\Codecov.exe"
   cmd.exe /c $Codecov -f $coverageFile
 }
