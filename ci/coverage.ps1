@@ -29,7 +29,7 @@ Get-ChildItem -Filter .\test\PalletPackerTests |
           -output:$coverageFile `
           -oldStyle `
           -filter:"+[$projectName]* -[$testProjectName]*" `
-          -searchdirs:"$csprojPath\bin\$configuration\netcoreapp2.0\" `
+          -searchdirs:"$csprojPath\bin\$configuration\netcoreapp2.1\" `
           -register:user
     }
 
@@ -46,6 +46,6 @@ If ($generateReport)
 If ($uploadCodeCov) 
 {
   nuget install -OutputDirectory packages -Version 1.9.0 Codecov
-  $Codecov = "packages\Codecov.1.0.1\tools\Codecov.exe"
+  $Codecov = "packages\Codecov.1.9.0\tools\Codecov.exe"
   cmd.exe /c $Codecov -f $coverageFile
 }
