@@ -4,7 +4,7 @@ Param (
   )
 
 $currentPath = Split-Path $MyInvocation.MyCommand.Path
-$coverageOutputDirectory = Join-Path $currentPath "coverage"
+$coverageOutputDirectory = Join-Path $currentPath "Debug"
 $coverageFile = "coverage-results.xml"
 
 Remove-Item $coverageOutputDirectory -Force -Recurse -ErrorAction SilentlyContinue
